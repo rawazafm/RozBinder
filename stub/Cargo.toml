@@ -1,0 +1,25 @@
+[package]
+name = "binder-stub"
+version = "0.1.0"
+description = "Launcher stub embedded in merged executables"
+edition = "2024"
+publish = false
+
+[lib]
+name = "binder_stub"
+path = "src/lib.rs"
+
+[[bin]]
+name = "binder-stub"
+path = "src/main.rs"
+
+[[bin]]
+name = "binder-fixture"
+path = "src/bin/fixture.rs"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+panic = "abort"
+strip = true
