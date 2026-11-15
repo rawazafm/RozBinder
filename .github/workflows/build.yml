@@ -1,0 +1,65 @@
+name: Build EXE
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri
+            stub
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p dist-artifacts
+          cp src-tauri/target/release/Binder.exe dist-artifacts/ || true
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe dist-artifacts/ || true
+          cp src-tauri/target/release/bundle/msi/*.msi dist-artifacts/ || true
+          ls -la dist-artifacts
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binder-windows
+          path: dist-artifacts/*
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-artifacts/*
+          generate_release_notes: true
